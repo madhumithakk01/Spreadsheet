@@ -140,7 +140,7 @@ export function SpreadsheetGrid({ docId }: SpreadsheetGridProps) {
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      <PresenceBar />
+      <PresenceBar docId={docId} />
       <div className="flex-1 overflow-auto p-4">
         <div
           className="inline-grid border border-zinc-200 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800"
