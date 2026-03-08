@@ -45,3 +45,4 @@ export function getFirestoreInstance(): Firestore | null {
 }
 
 export const DOCUMENTS_COLLECTION = "documents";
+export const PRESENCE_COLLECTION = "presence";
