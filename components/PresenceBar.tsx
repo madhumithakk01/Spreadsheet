@@ -16,8 +16,8 @@ import type { User } from "firebase/auth";
 const DISPLAY_NAME_KEY = "spreadsheet-display-name";
 const SESSION_ID_KEY = "spreadsheet-session-id";
 const USER_COLOR_KEY = "spreadsheet-user-color";
-const LAST_ACTIVE_THRESHOLD_MS = 45_000; // consider user offline after 45s
-const HEARTBEAT_INTERVAL_MS = 10_000;
+const LAST_ACTIVE_THRESHOLD_MS = 15_000; // consider user offline after 15s
+const HEARTBEAT_INTERVAL_MS = 5_000;
 
 const COLOR_PALETTE = [
   { name: "blue", bg: "bg-blue-500" },
@@ -137,9 +137,17 @@ export function PresenceBar({ docId, authUser }: PresenceBarProps) {
             lastActive: u?.lastActive && typeof u.lastActive.toMillis === "function" ? u.lastActive.toMillis() : 0,
             photoURL: u?.photoURL ?? null,
           }))
-          .filter((u) => now - u.lastActive < LAST_ACTIVE_THRESHOLD_MS)
-          .sort((a, b) => a.name.localeCompare(b.name));
-        setUsers(list);
+          .filter((u) => u.lastActive > 0 && now - u.lastActive < LAST_ACTIVE_THRESHOLD_MS)
+          .sort((a, b) => {
+            const byName = a.name.localeCompare(b.name);
+            if (byName !== 0) return byName;
+            return a.sessionId.localeCompare(b.sessionId);
+          });
+        setUsers((prev) => {
+          if (prev.length !== list.length) return list;
+          const same = list.every((u, i) => prev[i]?.sessionId === u.sessionId && prev[i]?.name === u.name);
+          return same ? prev : list;
+        });
       },
       (err) => console.error("Presence snapshot error:", err)
     );
