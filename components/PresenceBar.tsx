@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import {
   doc,
   onSnapshot,
+  setDoc,
   updateDoc,
   serverTimestamp,
   deleteField,
@@ -96,13 +97,19 @@ export function PresenceBar({ docId }: PresenceBarProps) {
     const presenceRef = doc(db, PRESENCE_COLLECTION, docId);
 
     const writePresence = () => {
-      updateDoc(presenceRef, {
-        [`users.${sessionId}`]: {
-          name: displayName,
-          color,
-          lastActive: serverTimestamp(),
+      setDoc(
+        presenceRef,
+        {
+          users: {
+            [sessionId]: {
+              name: displayName,
+              color,
+              lastActive: serverTimestamp(),
+            },
+          },
         },
-      }).catch((err) => console.error("Presence write error:", err));
+        { merge: true }
+      ).catch((err) => console.error("Presence write error:", err));
     };
 
     writePresence();
@@ -135,7 +142,11 @@ export function PresenceBar({ docId }: PresenceBarProps) {
       }
       updateDoc(presenceRef, {
         [`users.${sessionId}`]: deleteField(),
-      }).catch((err) => console.error("Presence remove error:", err));
+      }).catch((err) => {
+        if (err?.code !== "not-found") {
+          console.error("Presence remove error:", err);
+        }
+      });
       unsubscribe();
     };
   }, [docId, db, displayName]);
@@ -148,7 +159,9 @@ export function PresenceBar({ docId }: PresenceBarProps) {
       const presenceRef = doc(db, PRESENCE_COLLECTION, docId);
       updateDoc(presenceRef, {
         [`users.${sessionIdRef.current}`]: deleteField(),
-      }).catch(() => {});
+      }).catch((err) => {
+        if (err?.code !== "not-found") {}
+      });
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
