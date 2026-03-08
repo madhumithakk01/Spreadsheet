@@ -31,6 +31,7 @@ export function NewSpreadsheetButton() {
       const docId = generateDocId();
       const docRef = doc(db, DOCUMENTS_COLLECTION, docId);
       await setDoc(docRef, {
+        title: "Untitled Spreadsheet",
         cells: {},
         updatedAt: serverTimestamp(),
       });

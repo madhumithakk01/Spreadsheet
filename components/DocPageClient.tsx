@@ -4,6 +4,7 @@ import Link from "next/link";
 import { AuthProvider } from "@/components/AuthContext";
 import { HeaderAuth } from "@/components/HeaderAuth";
 import { SpreadsheetGrid } from "@/components/SpreadsheetGrid";
+import { EditableDocumentTitle } from "@/components/EditableDocumentTitle";
 
 type DocPageClientProps = {
   docId: string;
@@ -24,9 +25,9 @@ export function DocPageClient({ docId }: DocPageClientProps) {
             >
               ← Back
             </Link>
-            <h1 className="truncate text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-              Document {docId}
-            </h1>
+            <div className="flex min-w-0 flex-1 items-center">
+              <EditableDocumentTitle docId={docId} />
+            </div>
           </div>
           <div className="flex shrink-0 items-center justify-end">
             <HeaderAuth />
