@@ -11,6 +11,7 @@ import {
   type Timestamp,
 } from "firebase/firestore";
 import { getFirestoreInstance, PRESENCE_COLLECTION } from "@/lib/firebase";
+import type { User } from "firebase/auth";
 
 const DISPLAY_NAME_KEY = "spreadsheet-display-name";
 const SESSION_ID_KEY = "spreadsheet-session-id";
@@ -52,13 +53,16 @@ export type PresenceUser = {
   name: string;
   color: string;
   lastActive: number;
+  photoURL?: string | null;
 };
 
 export type PresenceBarProps = {
   docId: string | null;
+  /** When set, use this user's display name and photo for presence (overrides localStorage prompt). */
+  authUser?: User | null;
 };
 
-export function PresenceBar({ docId }: PresenceBarProps) {
+export function PresenceBar({ docId, authUser }: PresenceBarProps) {
   const [displayName, setDisplayNameState] = useState<string>("");
   const [displayNameInput, setDisplayNameInput] = useState("");
   const [users, setUsers] = useState<PresenceUser[]>([]);
@@ -67,6 +71,10 @@ export function PresenceBar({ docId }: PresenceBarProps) {
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const db = getFirestoreInstance();
+
+  /** Display name for presence: Google user name or localStorage name. */
+  const effectiveDisplayName =
+    authUser?.displayName ?? authUser?.email ?? (authUser ? "Signed in" : null) ?? displayName;
 
   // Load display name from localStorage (client-only)
   useEffect(() => {
@@ -85,9 +93,9 @@ export function PresenceBar({ docId }: PresenceBarProps) {
     setDisplayNameInput("");
   }, []);
 
-  // Write presence and subscribe when we have docId, db, and displayName
+  // Write presence and subscribe when we have docId, db, and a display name (from auth or localStorage)
   useEffect(() => {
-    if (!docId || !db || !displayName) return;
+    if (!docId || !db || !effectiveDisplayName) return;
 
     const sessionId = getOrCreateSessionId();
     const color = getOrCreateColor();
@@ -97,17 +105,17 @@ export function PresenceBar({ docId }: PresenceBarProps) {
     const presenceRef = doc(db, PRESENCE_COLLECTION, docId);
 
     const writePresence = () => {
+      const userPayload: { name: string; color: string; lastActive: ReturnType<typeof serverTimestamp>; photoURL?: string } = {
+        name: effectiveDisplayName,
+        color,
+        lastActive: serverTimestamp(),
+      };
+      if (authUser?.photoURL) {
+        userPayload.photoURL = authUser.photoURL;
+      }
       setDoc(
         presenceRef,
-        {
-          users: {
-            [sessionId]: {
-              name: displayName,
-              color,
-              lastActive: serverTimestamp(),
-            },
-          },
-        },
+        { users: { [sessionId]: userPayload } },
         { merge: true }
       ).catch((err) => console.error("Presence write error:", err));
     };
@@ -119,7 +127,7 @@ export function PresenceBar({ docId }: PresenceBarProps) {
       presenceRef,
       (snapshot) => {
         const data = snapshot.data();
-        const usersMap = (data?.users as Record<string, { name: string; color: string; lastActive?: Timestamp }>) ?? {};
+        const usersMap = (data?.users as Record<string, { name: string; color: string; lastActive?: Timestamp; photoURL?: string | null }>) ?? {};
         const now = Date.now();
         const list: PresenceUser[] = Object.entries(usersMap)
           .map(([sid, u]) => ({
@@ -127,6 +135,7 @@ export function PresenceBar({ docId }: PresenceBarProps) {
             name: u?.name ?? "Anonymous",
             color: u?.color ?? COLOR_PALETTE[0].bg,
             lastActive: u?.lastActive && typeof u.lastActive.toMillis === "function" ? u.lastActive.toMillis() : 0,
+            photoURL: u?.photoURL ?? null,
           }))
           .filter((u) => now - u.lastActive < LAST_ACTIVE_THRESHOLD_MS)
           .sort((a, b) => a.name.localeCompare(b.name));
@@ -149,7 +158,7 @@ export function PresenceBar({ docId }: PresenceBarProps) {
       });
       unsubscribe();
     };
-  }, [docId, db, displayName]);
+  }, [docId, db, effectiveDisplayName, authUser?.photoURL]);
 
   // Remove presence when tab/page closes
   useEffect(() => {
@@ -180,8 +189,8 @@ export function PresenceBar({ docId }: PresenceBarProps) {
     );
   }
 
-  // Need display name
-  if (!displayName) {
+  // Need display name only when not signed in with Google
+  if (!effectiveDisplayName) {
     return (
       <div
         className="border-b border-zinc-200 bg-zinc-50 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800"
@@ -223,10 +232,21 @@ export function PresenceBar({ docId }: PresenceBarProps) {
             key={u.sessionId}
             className="flex items-center gap-1.5 text-zinc-800 dark:text-zinc-200"
           >
-            <span
-              className={`h-2.5 w-2.5 shrink-0 rounded-full ${u.color}`}
-              aria-hidden
-            />
+            {u.photoURL ? (
+              <img
+                src={u.photoURL}
+                alt=""
+                width={20}
+                height={20}
+                className="h-5 w-5 shrink-0 rounded-full"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <span
+                className={`h-2.5 w-2.5 shrink-0 rounded-full ${u.color}`}
+                aria-hidden
+              />
+            )}
             {u.name}
           </span>
         ))

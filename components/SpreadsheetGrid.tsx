@@ -9,6 +9,7 @@ import {
   getFirestoreInstance,
   DOCUMENTS_COLLECTION,
 } from "@/lib/firebase";
+import { useAuth } from "./AuthContext";
 
 /**
  * Spreadsheet grid: 26 columns (A–Z), 30 rows (1–30).
@@ -36,6 +37,7 @@ export type SpreadsheetGridProps = {
 };
 
 export function SpreadsheetGrid({ docId }: SpreadsheetGridProps) {
+  const { user: authUser } = useAuth();
   const [cells, setCells] = useState<CellData>({});
   const [editingCell, setEditingCell] = useState<string | null>(null);
 
@@ -140,7 +142,7 @@ export function SpreadsheetGrid({ docId }: SpreadsheetGridProps) {
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      <PresenceBar docId={docId} />
+      <PresenceBar docId={docId} authUser={authUser} />
       <div className="flex-1 overflow-auto p-4">
         <div
           className="inline-grid border border-zinc-200 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800"
