@@ -12,14 +12,18 @@ export type CellProps = {
   displayValue: string;
   /** Raw stored value to show when editing (formula or plain text) */
   rawValue: string;
+  /** Whether this cell is the current selection (shows highlight border) */
+  isSelected: boolean;
   isEditing: boolean;
   onStartEdit: () => void;
-  onCommit: (value: string) => void;
+  /** Commit with optional move: 'down' (Enter), 'right' (Tab), 'left' (Shift+Tab) */
+  onCommit: (value: string, moveAfter?: "down" | "right" | "left") => void;
 };
 
 export function Cell({
   displayValue,
   rawValue,
+  isSelected,
   isEditing,
   onStartEdit,
   onCommit,
@@ -35,14 +39,20 @@ export function Cell({
     }
   }, [isEditing, rawValue]);
 
-  const handleCommit = () => {
-    onCommit(editValue.trim());
+  const handleCommit = (moveAfter?: "down" | "right" | "left") => {
+    onCommit(editValue.trim(), moveAfter);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      handleCommit();
+      handleCommit("down");
+      return;
+    }
+    if (e.key === "Tab") {
+      e.preventDefault();
+      handleCommit(e.shiftKey ? "left" : "right");
+      return;
     }
   };
 
@@ -53,7 +63,7 @@ export function Cell({
         type="text"
         value={editValue}
         onChange={(e) => setEditValue(e.target.value)}
-        onBlur={handleCommit}
+        onBlur={() => handleCommit()}
         onKeyDown={handleKeyDown}
         className="cell-input h-full w-full border-0 bg-blue-50 px-1 py-0.5 text-sm outline-none ring-1 ring-blue-400 dark:bg-blue-950/50 dark:ring-blue-500"
         data-cell-input
@@ -72,7 +82,11 @@ export function Cell({
           onStartEdit();
         }
       }}
-      className="flex min-h-[28px] min-w-[100px] items-center border border-zinc-200 bg-white px-1 py-0.5 text-sm cursor-cell dark:border-zinc-700 dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+      className={`flex min-h-[28px] min-w-[100px] items-center border px-1 py-0.5 text-sm cursor-cell dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 ${
+        isSelected
+          ? "border-blue-500 bg-blue-50/50 ring-2 ring-inset ring-blue-500 dark:border-blue-400 dark:bg-blue-950/30 dark:ring-blue-400"
+          : "border-zinc-200 bg-white dark:border-zinc-700"
+      }`}
       data-cell
     >
       {displayValue || "\u00a0"}
