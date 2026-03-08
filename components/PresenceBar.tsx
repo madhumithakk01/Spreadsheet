@@ -181,7 +181,7 @@ export function PresenceBar({ docId, authUser }: PresenceBarProps) {
   if (!docId) {
     return (
       <div
-        className="border-b border-zinc-200 bg-zinc-50 px-4 py-2 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400"
+        className="border-b border-zinc-200 bg-zinc-50/80 px-5 py-2.5 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-400"
         data-presence-bar
       >
         Active users: —
@@ -193,7 +193,7 @@ export function PresenceBar({ docId, authUser }: PresenceBarProps) {
   if (!effectiveDisplayName) {
     return (
       <div
-        className="border-b border-zinc-200 bg-zinc-50 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800"
+        className="flex flex-wrap items-center gap-3 border-b border-zinc-200 bg-zinc-50/80 px-5 py-2.5 dark:border-zinc-700 dark:bg-zinc-800/80"
         data-presence-bar
       >
         <span className="text-zinc-500 dark:text-zinc-400">Your name: </span>
@@ -205,12 +205,12 @@ export function PresenceBar({ docId, authUser }: PresenceBarProps) {
           onKeyDown={(e) => {
             if (e.key === "Enter") saveDisplayName(displayNameInput);
           }}
-          className="ml-2 rounded border border-zinc-300 bg-white px-2 py-0.5 text-zinc-900 outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+          className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-zinc-900 outline-none focus:ring-2 focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
         />
         <button
           type="button"
           onClick={() => saveDisplayName(displayNameInput)}
-          className="ml-2 rounded bg-blue-600 px-2 py-0.5 text-white hover:bg-blue-700"
+          className="rounded-lg bg-blue-600 px-3 py-1.5 font-medium text-white shadow-sm hover:bg-blue-700"
         >
           Save
         </button>
@@ -220,36 +220,40 @@ export function PresenceBar({ docId, authUser }: PresenceBarProps) {
 
   return (
     <div
-      className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-zinc-200 bg-zinc-50 px-4 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800"
+      className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-zinc-200 bg-zinc-50/80 px-5 py-3 dark:border-zinc-700 dark:bg-zinc-800/80"
       data-presence-bar
     >
-      <span className="text-zinc-500 dark:text-zinc-400">Active users:</span>
+      <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
+        Active users
+      </span>
       {users.length === 0 ? (
         <span className="text-zinc-400 dark:text-zinc-500">—</span>
       ) : (
-        users.map((u) => (
-          <span
-            key={u.sessionId}
-            className="flex items-center gap-1.5 text-zinc-800 dark:text-zinc-200"
-          >
-            {u.photoURL ? (
-              <img
-                src={u.photoURL}
-                alt=""
-                width={20}
-                height={20}
-                className="h-5 w-5 shrink-0 rounded-full"
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <span
-                className={`h-2.5 w-2.5 shrink-0 rounded-full ${u.color}`}
-                aria-hidden
-              />
-            )}
-            {u.name}
-          </span>
-        ))
+        <div className="flex flex-wrap items-center gap-4">
+          {users.map((u) => (
+            <span
+              key={u.sessionId}
+              className="flex items-center gap-2 rounded-full bg-white/60 py-1 pl-1 pr-2.5 text-sm text-zinc-800 shadow-sm dark:bg-zinc-700/60 dark:text-zinc-200"
+            >
+              {u.photoURL ? (
+                <img
+                  src={u.photoURL}
+                  alt=""
+                  width={24}
+                  height={24}
+                  className="h-6 w-6 shrink-0 rounded-full ring-2 ring-white dark:ring-zinc-600"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <span
+                  className={`h-3 w-3 shrink-0 rounded-full ${u.color}`}
+                  aria-hidden
+                />
+              )}
+              <span className="font-medium">{u.name}</span>
+            </span>
+          ))}
+        </div>
       )}
     </div>
   );
