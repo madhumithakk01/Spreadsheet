@@ -31,6 +31,21 @@ function getCellId(colIndex: number, rowIndex: number): string {
   return `${COL_LETTERS[colIndex]}${rowIndex + 1}`;
 }
 
+/** Parse "A1" -> { col: 0, row: 0 }; row is 0-based. */
+function parseCellId(cellId: string): { col: number; row: number } | null {
+  const match = cellId.match(/^([A-Z]+)(\d+)$/i);
+  if (!match) return null;
+  const colStr = match[1].toUpperCase();
+  let col = 0;
+  for (let i = 0; i < colStr.length; i++) {
+    col = col * 26 + (colStr.charCodeAt(i) - 64);
+  }
+  col -= 1;
+  const row = parseInt(match[2], 10) - 1;
+  if (col < 0 || col >= COLS || row < 0 || row >= ROWS) return null;
+  return { col, row };
+}
+
 export type SpreadsheetGridProps = {
   /** Firestore document ID. When provided, loads and syncs with Firestore. */
   docId: string | null;
@@ -40,12 +55,19 @@ export function SpreadsheetGrid({ docId }: SpreadsheetGridProps) {
   const { user: authUser } = useAuth();
   const [cells, setCells] = useState<CellData>({});
   const [editingCell, setEditingCell] = useState<string | null>(null);
+  const [selectedCellId, setSelectedCellId] = useState<string>("A1");
 
   const stateRef = useRef<CellData>({});
   const pendingWritesRef = useRef<CellData>({});
   const flushTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const gridContainerRef = useRef<HTMLDivElement>(null);
 
   const db = getFirestoreInstance();
+
+  // Focus grid on mount so keyboard navigation works without an extra click
+  useEffect(() => {
+    gridContainerRef.current?.focus({ preventScroll: true });
+  }, []);
 
   // Keep ref in sync with state for use in flush and snapshot
   stateRef.current = cells;
@@ -115,11 +137,56 @@ export function SpreadsheetGrid({ docId }: SpreadsheetGridProps) {
   );
 
   const handleStartEdit = useCallback((cellId: string) => {
+    setSelectedCellId(cellId);
     setEditingCell(cellId);
   }, []);
 
+  type MoveDirection = "up" | "down" | "left" | "right";
+
+  const moveSelection = useCallback((direction: MoveDirection) => {
+    const coords = parseCellId(selectedCellId);
+    if (!coords) return;
+    let { col, row } = coords;
+    switch (direction) {
+      case "up":
+        row = Math.max(0, row - 1);
+        break;
+      case "down":
+        row = Math.min(ROWS - 1, row + 1);
+        break;
+      case "left":
+        col = Math.max(0, col - 1);
+        break;
+      case "right":
+        col = Math.min(COLS - 1, col + 1);
+        break;
+    }
+    setSelectedCellId(getCellId(col, row));
+  }, [selectedCellId]);
+
+  const getCellIdAfterMove = useCallback(
+    (cellId: string, direction: "down" | "right" | "left"): string => {
+      const coords = parseCellId(cellId);
+      if (!coords) return cellId;
+      let { col, row } = coords;
+      switch (direction) {
+        case "down":
+          row = Math.min(ROWS - 1, row + 1);
+          break;
+        case "right":
+          col = Math.min(COLS - 1, col + 1);
+          break;
+        case "left":
+          col = Math.max(0, col - 1);
+          break;
+      }
+      return getCellId(col, row);
+    },
+    []
+  );
+
   const handleCommit = useCallback(
-    (cellId: string, value: string) => {
+    (cellId: string, value: string, moveAfter?: "down" | "right" | "left") => {
       setCells((prev) => {
         const next = { ...prev };
         if (value === "") {
@@ -133,11 +200,52 @@ export function SpreadsheetGrid({ docId }: SpreadsheetGridProps) {
       });
       setEditingCell(null);
 
+      if (moveAfter) {
+        const nextCellId = getCellIdAfterMove(cellId, moveAfter);
+        setSelectedCellId(nextCellId);
+        gridContainerRef.current?.focus();
+      }
+
       if (docId && db) {
         scheduleFlush();
       }
     },
-    [docId, db, scheduleFlush]
+    [docId, db, scheduleFlush, getCellIdAfterMove]
+  );
+
+  const handleGridKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (editingCell) return;
+      switch (e.key) {
+        case "ArrowUp":
+          e.preventDefault();
+          moveSelection("up");
+          break;
+        case "ArrowDown":
+          e.preventDefault();
+          moveSelection("down");
+          break;
+        case "ArrowLeft":
+          e.preventDefault();
+          moveSelection("left");
+          break;
+        case "ArrowRight":
+          e.preventDefault();
+          moveSelection("right");
+          break;
+        case "Tab":
+          e.preventDefault();
+          moveSelection(e.shiftKey ? "left" : "right");
+          break;
+        case "Enter":
+          e.preventDefault();
+          handleStartEdit(selectedCellId);
+          break;
+        default:
+          break;
+      }
+    },
+    [editingCell, moveSelection, selectedCellId, handleStartEdit]
   );
 
   return (
@@ -145,7 +253,12 @@ export function SpreadsheetGrid({ docId }: SpreadsheetGridProps) {
       <PresenceBar docId={docId} authUser={authUser} />
       <div className="flex-1 overflow-auto p-4">
         <div
-          className="inline-grid border border-zinc-200 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800"
+          ref={gridContainerRef}
+          tabIndex={0}
+          role="grid"
+          aria-label="Spreadsheet"
+          onKeyDown={handleGridKeyDown}
+          className="inline-grid border border-zinc-200 bg-zinc-100 outline-none dark:border-zinc-700 dark:bg-zinc-800"
           style={{
             gridTemplateColumns: `60px repeat(${COLS}, minmax(100px, 100px))`,
             gridTemplateRows: `repeat(${ROWS + 1}, 28px)`,
@@ -182,9 +295,10 @@ export function SpreadsheetGrid({ docId }: SpreadsheetGridProps) {
                     key={cellId}
                     displayValue={getDisplayValueForCell(cellId)}
                     rawValue={getRawValue(cellId)}
+                    isSelected={selectedCellId === cellId}
                     isEditing={editingCell === cellId}
                     onStartEdit={() => handleStartEdit(cellId)}
-                    onCommit={(value) => handleCommit(cellId, value)}
+                    onCommit={(value, moveAfter) => handleCommit(cellId, value, moveAfter)}
                   />
                 );
               })}
