@@ -5,6 +5,7 @@
 
 import { getApps, initializeApp, type FirebaseApp } from "firebase/app";
 import { getFirestore, type Firestore } from "firebase/firestore";
+import { getAuth, type Auth } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -42,6 +43,20 @@ export function getFirestoreInstance(): Firestore | null {
     firestoreInstance = getFirestore(app);
   }
   return firestoreInstance;
+}
+
+let authInstance: Auth | null = null;
+
+/**
+ * Returns Firebase Auth instance, or null if Firebase is not configured.
+ */
+export function getAuthInstance(): Auth | null {
+  const app = getFirebaseApp();
+  if (!app) return null;
+  if (!authInstance) {
+    authInstance = getAuth(app);
+  }
+  return authInstance;
 }
 
 export const DOCUMENTS_COLLECTION = "documents";
