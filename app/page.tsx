@@ -1,8 +1,8 @@
 import Link from "next/link";
+import { NewSpreadsheetButton } from "@/components/NewSpreadsheetButton";
 
 /**
- * Dashboard: placeholder list of spreadsheet documents.
- * Real document list from Firestore will be implemented later.
+ * Dashboard: list of spreadsheet documents and button to create a new one.
  */
 
 const PLACEHOLDER_DOCS = [
@@ -13,10 +13,11 @@ const PLACEHOLDER_DOCS = [
 export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
-      <header className="border-b border-zinc-200 bg-white px-6 py-4 dark:border-zinc-800 dark:bg-zinc-900">
+      <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-6 py-4 dark:border-zinc-800 dark:bg-zinc-900">
         <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
           Spreadsheets
         </h1>
+        <NewSpreadsheetButton />
       </header>
       <main className="mx-auto max-w-2xl px-6 py-8">
         <ul className="space-y-2">
