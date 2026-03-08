@@ -4,32 +4,36 @@ import { useEffect, useRef, useState } from "react";
 
 /**
  * Editable spreadsheet cell.
- * Displays value until clicked; then shows an input. Commits on Enter or blur.
+ * Displays value until clicked; then shows an input with the raw value (e.g. formula). Commits on Enter or blur.
  */
 
 export type CellProps = {
-  value: string;
+  /** Value to show when not editing (computed result for formulas, or plain text) */
+  displayValue: string;
+  /** Raw stored value to show when editing (formula or plain text) */
+  rawValue: string;
   isEditing: boolean;
   onStartEdit: () => void;
   onCommit: (value: string) => void;
 };
 
 export function Cell({
-  value,
+  displayValue,
+  rawValue,
   isEditing,
   onStartEdit,
   onCommit,
 }: CellProps) {
-  const [editValue, setEditValue] = useState(value);
+  const [editValue, setEditValue] = useState(rawValue);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isEditing) {
-      setEditValue(value);
+      setEditValue(rawValue);
       inputRef.current?.focus();
       inputRef.current?.select();
     }
-  }, [isEditing, value]);
+  }, [isEditing, rawValue]);
 
   const handleCommit = () => {
     onCommit(editValue.trim());
@@ -71,7 +75,7 @@ export function Cell({
       className="flex min-h-[28px] min-w-[100px] items-center border border-zinc-200 bg-white px-1 py-0.5 text-sm cursor-cell dark:border-zinc-700 dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800"
       data-cell
     >
-      {value || "\u00a0"}
+      {displayValue || "\u00a0"}
     </div>
   );
 }

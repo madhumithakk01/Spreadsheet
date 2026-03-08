@@ -3,10 +3,12 @@
 import { useCallback, useState, Fragment } from "react";
 import { Cell } from "./Cell";
 import { PresenceBar } from "./PresenceBar";
+import { getDisplayValue } from "@/lib/formulas";
 
 /**
  * Spreadsheet grid: 26 columns (A–Z), 30 rows (1–30).
- * Cell values stored in local state. Click to edit; Enter or blur to save.
+ * Cell values stored in local state. Formulas (starting with =) are evaluated for display.
+ * Click to edit; Enter or blur to save. Formula results update when referenced cells change.
  */
 
 const COLS = 26;
@@ -26,9 +28,14 @@ export function SpreadsheetGrid() {
   const [cells, setCells] = useState<CellData>({});
   const [editingCell, setEditingCell] = useState<string | null>(null);
 
-  const getValue = useCallback(
+  const getRawValue = useCallback(
     (cellId: string) => cells[cellId] ?? "",
     [cells]
+  );
+
+  const getDisplayValueForCell = useCallback(
+    (cellId: string) => getDisplayValue(getRawValue(cellId), cells),
+    [cells, getRawValue]
   );
 
   const handleStartEdit = useCallback((cellId: string) => {
@@ -88,7 +95,8 @@ export function SpreadsheetGrid() {
                 return (
                   <Cell
                     key={cellId}
-                    value={getValue(cellId)}
+                    displayValue={getDisplayValueForCell(cellId)}
+                    rawValue={getRawValue(cellId)}
                     isEditing={editingCell === cellId}
                     onStartEdit={() => handleStartEdit(cellId)}
                     onCommit={(value) => handleCommit(cellId, value)}
