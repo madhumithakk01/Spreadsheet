@@ -27,7 +27,7 @@ export default async function SpreadsheetEditorPage({
           Document {id}
         </h1>
       </header>
-      <SpreadsheetGrid />
+      <SpreadsheetGrid docId={id} />
     </div>
   );
 }

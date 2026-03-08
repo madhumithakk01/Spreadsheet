@@ -1,18 +1,24 @@
 "use client";
 
-import { useCallback, useState, Fragment } from "react";
+import { useCallback, useState, Fragment, useEffect, useRef } from "react";
+import { doc, onSnapshot, setDoc, serverTimestamp } from "firebase/firestore";
 import { Cell } from "./Cell";
 import { PresenceBar } from "./PresenceBar";
 import { getDisplayValue } from "@/lib/formulas";
+import {
+  getFirestoreInstance,
+  DOCUMENTS_COLLECTION,
+} from "@/lib/firebase";
 
 /**
  * Spreadsheet grid: 26 columns (A–Z), 30 rows (1–30).
- * Cell values stored in local state. Formulas (starting with =) are evaluated for display.
- * Click to edit; Enter or blur to save. Formula results update when referenced cells change.
+ * Cell values stored in local state; Firestore is the source of truth when docId is provided.
+ * Subscribes to document with onSnapshot and debounces writes to Firestore.
  */
 
 const COLS = 26;
 const ROWS = 30;
+const DEBOUNCE_MS = 500;
 
 const COL_LETTERS = Array.from({ length: COLS }, (_, i) =>
   String.fromCharCode(65 + i)
@@ -24,9 +30,77 @@ function getCellId(colIndex: number, rowIndex: number): string {
   return `${COL_LETTERS[colIndex]}${rowIndex + 1}`;
 }
 
-export function SpreadsheetGrid() {
+export type SpreadsheetGridProps = {
+  /** Firestore document ID. When provided, loads and syncs with Firestore. */
+  docId: string | null;
+};
+
+export function SpreadsheetGrid({ docId }: SpreadsheetGridProps) {
   const [cells, setCells] = useState<CellData>({});
   const [editingCell, setEditingCell] = useState<string | null>(null);
+
+  const stateRef = useRef<CellData>({});
+  const pendingWritesRef = useRef<CellData>({});
+  const flushTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const db = getFirestoreInstance();
+
+  // Keep ref in sync with state for use in flush and snapshot
+  stateRef.current = cells;
+
+  // Subscribe to Firestore document
+  useEffect(() => {
+    if (!docId || !db) return;
+
+    const docRef = doc(db, DOCUMENTS_COLLECTION, docId);
+
+    const unsubscribe = onSnapshot(
+      docRef,
+      (snapshot) => {
+        const data = snapshot.data();
+        const remoteCells = (data?.cells as Record<string, string> | undefined) ?? {};
+        setCells((prev) => ({
+          ...remoteCells,
+          ...pendingWritesRef.current,
+        }));
+      },
+      (err) => {
+        console.error("Firestore snapshot error:", err);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [docId, db]);
+
+  const flushToFirestore = useCallback(() => {
+    if (!docId || !db) return;
+
+    const docRef = doc(db, DOCUMENTS_COLLECTION, docId);
+    const payload = { ...stateRef.current };
+    setDoc(
+      docRef,
+      {
+        cells: payload,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    ).then(
+      () => {
+        pendingWritesRef.current = {};
+      },
+      (err) => {
+        console.error("Firestore write error:", err);
+      }
+    );
+    flushTimeoutRef.current = null;
+  }, [docId, db]);
+
+  const scheduleFlush = useCallback(() => {
+    if (flushTimeoutRef.current) {
+      clearTimeout(flushTimeoutRef.current);
+    }
+    flushTimeoutRef.current = setTimeout(flushToFirestore, DEBOUNCE_MS);
+  }, [flushToFirestore]);
 
   const getRawValue = useCallback(
     (cellId: string) => cells[cellId] ?? "",
@@ -42,18 +116,27 @@ export function SpreadsheetGrid() {
     setEditingCell(cellId);
   }, []);
 
-  const handleCommit = useCallback((cellId: string, value: string) => {
-    setCells((prev) => {
-      const next = { ...prev };
-      if (value === "") {
-        delete next[cellId];
-      } else {
-        next[cellId] = value;
+  const handleCommit = useCallback(
+    (cellId: string, value: string) => {
+      setCells((prev) => {
+        const next = { ...prev };
+        if (value === "") {
+          delete next[cellId];
+          delete pendingWritesRef.current[cellId];
+        } else {
+          next[cellId] = value;
+          pendingWritesRef.current[cellId] = value;
+        }
+        return next;
+      });
+      setEditingCell(null);
+
+      if (docId && db) {
+        scheduleFlush();
       }
-      return next;
-    });
-    setEditingCell(null);
-  }, []);
+    },
+    [docId, db, scheduleFlush]
+  );
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
