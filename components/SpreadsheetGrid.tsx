@@ -251,28 +251,28 @@ export function SpreadsheetGrid({ docId }: SpreadsheetGridProps) {
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       <PresenceBar docId={docId} authUser={authUser} />
-      <div className="flex-1 overflow-auto p-4">
+      <div className="flex-1 overflow-auto p-6">
         <div
           ref={gridContainerRef}
           tabIndex={0}
           role="grid"
           aria-label="Spreadsheet"
           onKeyDown={handleGridKeyDown}
-          className="inline-grid border border-zinc-200 bg-zinc-100 outline-none dark:border-zinc-700 dark:bg-zinc-800"
+          className="inline-grid rounded-lg border border-zinc-200 bg-zinc-100 shadow-sm outline-none dark:border-zinc-700 dark:bg-zinc-800"
           style={{
-            gridTemplateColumns: `60px repeat(${COLS}, minmax(100px, 100px))`,
-            gridTemplateRows: `repeat(${ROWS + 1}, 28px)`,
+            gridTemplateColumns: `56px repeat(${COLS}, minmax(100px, 100px))`,
+            gridTemplateRows: `repeat(${ROWS + 1}, 30px)`,
           }}
           data-spreadsheet-grid
         >
           {/* Top-left corner */}
-          <div className="sticky left-0 top-0 z-10 border-b border-r border-zinc-300 bg-zinc-200 dark:border-zinc-600 dark:bg-zinc-700" />
+          <div className="sticky left-0 top-0 z-10 border-b border-r border-zinc-300 bg-zinc-200/90 text-zinc-600 dark:border-zinc-600 dark:bg-zinc-700/90 dark:text-zinc-400" />
 
           {/* Column headers A–Z */}
           {COL_LETTERS.map((letter) => (
             <div
               key={letter}
-              className="sticky top-0 z-10 flex min-w-[100px] items-center justify-center border-b border-r border-zinc-300 bg-zinc-200 text-xs font-semibold text-zinc-700 dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-300"
+              className="sticky top-0 z-10 flex min-w-[100px] items-center justify-center border-b border-r border-zinc-300 bg-zinc-200/90 text-xs font-semibold text-zinc-700 dark:border-zinc-600 dark:bg-zinc-700/90 dark:text-zinc-300"
             >
               {letter}
             </div>
@@ -283,7 +283,7 @@ export function SpreadsheetGrid({ docId }: SpreadsheetGridProps) {
             <Fragment key={rowIndex}>
               {/* Row number */}
               <div
-                className="sticky left-0 z-10 flex min-w-[60px] items-center justify-center border-b border-r border-zinc-300 bg-zinc-200 text-xs font-medium text-zinc-600 dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-400"
+                className="sticky left-0 z-10 flex min-w-[56px] items-center justify-center border-b border-r border-zinc-300 bg-zinc-200/90 text-xs font-medium text-zinc-600 dark:border-zinc-600 dark:bg-zinc-700/90 dark:text-zinc-400"
               >
                 {rowIndex + 1}
               </div>

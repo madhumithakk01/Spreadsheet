@@ -65,7 +65,7 @@ export function Cell({
         onChange={(e) => setEditValue(e.target.value)}
         onBlur={() => handleCommit()}
         onKeyDown={handleKeyDown}
-        className="cell-input h-full w-full border-0 bg-blue-50 px-1 py-0.5 text-sm outline-none ring-1 ring-blue-400 dark:bg-blue-950/50 dark:ring-blue-500"
+        className="cell-input h-full w-full border-0 bg-blue-50/80 px-2 py-0.5 text-sm outline-none ring-2 ring-inset ring-blue-400 dark:bg-blue-950/40 dark:ring-blue-500"
         data-cell-input
       />
     );
@@ -82,10 +82,10 @@ export function Cell({
           onStartEdit();
         }
       }}
-      className={`flex min-h-[28px] min-w-[100px] items-center border px-1 py-0.5 text-sm cursor-cell dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 ${
+      className={`flex min-h-[28px] min-w-[100px] items-center border px-2 py-0.5 text-sm transition-colors cursor-cell dark:bg-zinc-900 ${
         isSelected
-          ? "border-blue-500 bg-blue-50/50 ring-2 ring-inset ring-blue-500 dark:border-blue-400 dark:bg-blue-950/30 dark:ring-blue-400"
-          : "border-zinc-200 bg-white dark:border-zinc-700"
+          ? "z-[1] border-blue-500 bg-blue-50 ring-2 ring-inset ring-blue-500 dark:border-blue-400 dark:bg-blue-950/40 dark:ring-blue-400"
+          : "border-zinc-200 bg-white hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
       }`}
       data-cell
     >
