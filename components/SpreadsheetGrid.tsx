@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState, Fragment, useEffect, useRef } from "react";
-import { doc, onSnapshot, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, onSnapshot, updateDoc, serverTimestamp } from "firebase/firestore";
 import { Cell } from "./Cell";
 import { PresenceBar } from "./PresenceBar";
 import { getDisplayValue } from "@/lib/formulas";
@@ -101,22 +101,21 @@ export function SpreadsheetGrid({ docId }: SpreadsheetGridProps) {
 
     const docRef = doc(db, DOCUMENTS_COLLECTION, docId);
     const payload = { ...stateRef.current };
-    setDoc(
-      docRef,
-      {
-        cells: payload,
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true }
-    ).then(
-      () => {
-        pendingWritesRef.current = {};
-      },
-      (err) => {
-        console.error("Firestore write error:", err);
-      }
-    );
-    flushTimeoutRef.current = null;
+    updateDoc(docRef, {
+      cells: payload,
+      updatedAt: serverTimestamp(),
+    })
+      .then(
+        () => {
+          pendingWritesRef.current = {};
+        },
+        (err) => {
+          console.error("Firestore write error:", err);
+        }
+      )
+      .finally(() => {
+        flushTimeoutRef.current = null;
+      });
   }, [docId, db]);
 
   const scheduleFlush = useCallback(() => {
